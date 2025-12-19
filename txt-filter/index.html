@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Text File Line Filter</title>
-    <style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/heroicons/2.0.18/outline/index.min.js"></script>
+    <style><style>
         * {
             margin: 0;
             padding: 0;
@@ -261,7 +262,7 @@
                     Choose File
                 </label>
                 <input type="file" id="fileInput" accept=".txt">
-                <span class="file-info" id="fileInfo">No file selected</span>
+                <span class="file-info" id="fileInfo"></span>
             </div>
         </div>
 
@@ -272,6 +273,11 @@
                 <input type="checkbox" id="caseSensitive">
                 <label for="caseSensitive" class="checkbox-label">Case sensitive search</label>
             </div>
+        </div>
+
+        <div class="section">
+            <label for="excludeInput">Except lines containing</label>
+            <input type="text" id="excludeInput" placeholder='e.g., "paypal"'>
         </div>
 
         <div class="section">
@@ -310,6 +316,7 @@
         const fileInput = document.getElementById('fileInput');
         const fileInfo = document.getElementById('fileInfo');
         const searchInput = document.getElementById('searchInput');
+        const excludeInput = document.getElementById('excludeInput');
         const caseSensitive = document.getElementById('caseSensitive');
         const searchBtn = document.getElementById('searchBtn');
         const downloadBtn = document.getElementById('downloadBtn');
@@ -332,21 +339,15 @@
                 reader.readAsText(file);
             } else {
                 alert('Please upload a valid .txt file');
-                fileInfo.textContent = 'No file selected';
             }
         });
 
         searchBtn.addEventListener('click', function() {
-            if (!fileContent) {
-                alert('Please upload a file first');
-                return;
-            }
-            if (!searchInput.value.trim()) {
-                alert('Please enter a word to search for');
-                return;
-            }
+            if (!fileContent) { alert('Please upload a file first'); return; }
+            if (!searchInput.value.trim()) { alert('Please enter a word to search for'); return; }
 
             const searchWord = searchInput.value.trim();
+            const excludeWord = excludeInput.value.trim();
             const isCaseSensitive = caseSensitive.checked;
             const lines = fileContent.split('\n');
             matchedLines = [];
@@ -354,12 +355,10 @@
             lines.forEach((line, index) => {
                 const searchLine = isCaseSensitive ? line : line.toLowerCase();
                 const searchTerm = isCaseSensitive ? searchWord : searchWord.toLowerCase();
-                
-                if (searchLine.includes(searchTerm)) {
-                    matchedLines.push({
-                        num: index + 1,
-                        text: line
-                    });
+                const excludeTerm = isCaseSensitive ? excludeWord : excludeWord.toLowerCase();
+
+                if (searchLine.includes(searchTerm) && (!excludeTerm || !searchLine.includes(excludeTerm))) {
+                    matchedLines.push({ num: index + 1, text: line });
                 }
             });
 
@@ -379,13 +378,12 @@
 
         downloadBtn.addEventListener('click', function() {
             if (matchedLines.length === 0) return;
-
             const downloadText = matchedLines.map(l => l.text).join('\n');
             const blob = new Blob([downloadText], { type: 'text/plain' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `${searchInput.value}_${fileName}`;
+            a.download = `filtered_${searchInput.value}_${fileName}`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -393,9 +391,10 @@
         });
 
         searchInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                searchBtn.click();
-            }
+            if (e.key === 'Enter') { searchBtn.click(); }
+        });
+        excludeInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') { searchBtn.click(); }
         });
     </script>
 </body>
