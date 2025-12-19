@@ -382,7 +382,7 @@
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `filtered_${searchInput.value}_${fileName}`;
+            a.download = `${searchInput.value}_${fileName}`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
