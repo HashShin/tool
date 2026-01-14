@@ -1,0 +1,321 @@
+/* Global styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+  border: none;
+  box-shadow: none;
+}
+
+body {
+  background: #1a1a1a;
+  color: #e0e0e0;
+  font-family: monospace;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  margin: 0;
+  padding: 20px;
+}
+
+
+body.page-b, body.page-c {
+  padding: 40px 20px;
+  justify-content: flex-start;
+}
+body.page-d {
+  padding: 10px 20px;
+  justify-content: flex-start;
+}
+h1 {
+  font-size: 2em;
+  margin-bottom: 20px;
+}
+
+h2 {
+  margin-top: 30px;
+  margin-bottom: 10px;
+}
+
+a {
+  background: #444;
+  color: #e0e0e0;
+  border: none;
+  padding: 8px 16px;
+  margin-bottom: 23px;
+  border-radius: 6px;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+}
+
+a:hover {
+  background: #555;
+}
+
+a.home-link {
+  margin-bottom: 10px;
+}
+
+
+a.index-link {
+  display: inline-block;
+  padding: 10px 20px;
+  margin-bottom: 20px;
+}
+
+/* Common form elements */
+input[type="text"] {
+  width: 100%;
+  max-width: 700px;
+  background: #2b2b2b;
+  color: #e0e0e0;
+  border: 1px solid #444;
+  border-radius: 6px;
+  padding: 10px;
+  font-family: monospace;
+  font-size: 0.95em;
+}
+
+input[type="text"]:focus {
+  outline: none;
+  border-color: #666;
+}
+
+input[type="text"]::placeholder {
+  color: #888;
+}
+
+input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+.controls input[type="checkbox"] {
+    transform: translateY(4px); /* Increase this value to lower it more */
+}
+
+/* Buttons */
+button {
+  background: #444;
+  color: #e0e0e0;
+  border: none;
+  padding: 8px 16px;
+  margin: 5px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: monospace;
+  font-size: 0.95em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+button:hover {
+  background: #555;
+}
+
+button.success {
+  background: #2d5016;
+}
+
+button:disabled {
+  background: #333;
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* Textarea and pre */
+textarea, pre {
+  width: 100%;
+  max-width: 700px;
+  background: #2b2b2b;
+  color: #e0e0e0;
+  border: 1px solid #444;
+  border-radius: 6px;
+  padding: 10px;
+  font-family: monospace;
+  font-size: 0.95em;
+  box-sizing: border-box;
+}
+
+textarea {
+  height: 150px;
+  resize: vertical;
+  padding-right: 45px;
+}
+
+pre {
+  min-height: 150px;
+  overflow: auto;
+  min-height: 200px;
+  max-height: 400px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+pre::-webkit-scrollbar {
+  width: 10px;
+}
+
+pre::-webkit-scrollbar-track {
+  background: #1a1a1a;
+  border-radius: 5px;
+}
+
+pre::-webkit-scrollbar-thumb {
+  background: #444;
+  border-radius: 5px;
+}
+
+pre::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Layout elements */
+.textarea-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 700px;
+}
+
+.section {
+  margin-bottom: 20px;
+  width: 100%;
+  max-width: 700px;
+}
+
+.controls {
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
+.hidden {
+  display: none;
+}
+
+.label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 0.9em;
+}
+
+label {
+  margin-right: 15px;
+  font-size: 0.9em;
+  cursor: pointer;
+  margin: 0;
+}
+
+.checkbox-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.checkbox-label {
+  font-size: 0.9em;
+  cursor: pointer;
+  margin: 0;
+}
+
+.button-group {
+  display: flex;
+  gap: 10px;
+}
+
+.file-upload-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.file-upload-btn {
+  background: #444;
+  color: #e0e0e0;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+}
+
+.file-upload-btn:hover {
+  background: #555;
+}
+
+.file-info {
+  font-size: 0.9em;
+}
+
+#fileInput {
+  display: none;
+}
+
+.icon {
+  width: 18px;
+  height: 18px;
+}
+
+.paste-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: #3a3a3a;
+  border: 1px solid #555;
+  border-radius: 4px;
+  padding: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  transition: all 0.2s;
+}
+
+.paste-btn:hover {
+  background: #4a4a4a;
+  border-color: #666;
+}
+
+.paste-btn svg {
+  width: 18px;
+  height: 18px;
+  fill: #e0e0e0;
+}
+
+.preview-section {
+  margin-top: 30px;
+  width: 100%;
+  max-width: 700px;
+  display: none;
+}
+
+.preview-section.show {
+  display: block;
+}
+
+.preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.preview-header h2 {
+  font-size: 1.3em;
+  margin: 0;
+}
+
+.match-count {
+  font-size: 0.9em;
+}
