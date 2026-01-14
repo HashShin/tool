@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Text File Line Filter</title>
+  <link rel="stylesheet" href="../styles.css">
+  <style>
+    .tags-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    
+    .tags-container:empty {
+      display: none;
+    }
+    
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #2b2b2b;
+      color: #e0e0e0;
+      border: 1px solid #555;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 0.9em;
+      font-family: monospace;
+    }
+    
+    .tag-remove {
+      background: none;
+      border: none;
+      color: #e0e0e0;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+      padding: 0;
+      width: 18px;
+      height: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 3px;
+      transition: background 0.2s;
+      margin-left: 4px;
+    }
+    
+    .tag-remove:hover {
+      background: #444;
+    }
+    
+    .input-with-button {
+      display: flex;
+      gap: 10px;
+      width: 100%;
+    }
+    
+    .input-with-button input {
+      flex: 1;
+    }
+    
+    .add-btn {
+      background: #444;
+      color: #e0e0e0;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+      min-width: 44px;
+      font-family: monospace;
+    }
+    
+    .add-btn:hover {
+      background: #555;
+    }
+    
+    .add-btn .icon {
+      width: 18px;
+      height: 18px;
+    }
+
+    .format-section {
+      margin-top: 20px;
+      margin-bottom: 20px;
+      width: 100%;
+      max-width: 700px;
+      background: #2b2b2b;
+      border: 1px solid #444;
+      border-radius: 6px;
+      padding: 15px;
+      display: none;
+    }
+
+    .format-section.show {
+      display: block;
+    }
+
+    .format-section h3 {
+      margin: 0 0 15px 0;
+      font-size: 1.1em;
+      color: #e0e0e0;
+    }
+
+    .format-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .format-row label {
+      min-width: 60px;
+      font-size: 0.9em;
+    }
+
+    .format-row input[type="text"] {
+      flex: 1;
+      max-width: 250px;
+    }
+
+    .format-actions {
+      margin-top: 15px;
+      display: flex;
+      gap: 10px;
+    }
+  </style>
+</head>
+<body class="page-c">
+  <a href="../">Home</a>
+  <h1>Text File Line Filter</h1>
+
+  <div class="section">
+    <label>Upload Text File</label>
+    <div class="file-upload-wrapper">
+      <label for="fileInput" class="file-upload-btn">
+        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+        </svg>
+        Choose File
+      </label>
+      <input type="file" id="fileInput" accept=".txt">
+      <span class="file-info" id="fileInfo"></span>
+    </div>
+  </div>
+
+  <div class="section">
+    <label for="searchInput">Search for Word</label>
+    <input type="text" id="searchInput" placeholder='e.g., "stripe"'>
+    <div class="checkbox-wrapper">
+      <input type="checkbox" id="caseSensitive">
+      <label for="caseSensitive" class="checkbox-label">Case sensitive search</label>
+    </div>
+  </div>
+
+  <div class="section">
+    <label for="excludeInput">Except lines containing</label>
+    <div class="tags-container" id="excludeTags"></div>
+    <div class="input-with-button">
+      <input type="text" id="excludeInput" placeholder='e.g., "paypal"'>
+      <button type="button" id="addExcludeBtn" class="add-btn">
+        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="button-group">
+      <button id="searchBtn">
+        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+        </svg>
+        Search & Preview
+      </button>
+      <button id="downloadBtn" disabled>
+        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+        </svg>
+        Download Result
+      </button>
+      <button id="copyBtn" disabled>
+        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+        </svg>
+        Copy Result
+      </button>
+    </div>
+  </div>
+
+  <div class="format-section" id="formatSection">
+    <h3>Format Options</h3>
+    
+    <div class="checkbox-wrapper">
+      <input type="checkbox" id="extractDomains">
+      <label for="extractDomains" class="checkbox-label">Extract domains only</label>
+    </div>
+
+    <div class="format-row">
+      <label for="prefixInput">Prefix:</label>
+      <input type="text" id="prefixInput" placeholder='e.g., "https://"'>
+    </div>
+
+    <div class="format-row">
+      <label for="suffixInput">Suffix:</label>
+      <input type="text" id="suffixInput" placeholder='e.g., "/api"'>
+    </div>
+
+    <div class="format-actions">
+      <button id="applyFormatBtn">
+        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+        </svg>
+        Apply Formatting
+      </button>
+      <button id="resetFormatBtn">
+        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+        </svg>
+        Reset
+      </button>
+    </div>
+  </div>
+
+  <div class="preview-section" id="previewSection">
+    <div class="preview-header">
+      <h2>Preview:</h2>
+      <span class="match-count" id="matchCount"></span>
+    </div>
+    <pre id="previewContent"></pre>
+  </div>
+
+  <script>
+    let fileContent = '';
+    let fileName = '';
+    let matchedLines = [];
+    let originalMatchedLines = []; // Store original results
+    let isCordovaReady = false;
+    let excludeTerms = [];
+
+    const fileInput = document.getElementById('fileInput');
+    const fileInfo = document.getElementById('fileInfo');
+    const searchInput = document.getElementById('searchInput');
+    const excludeInput = document.getElementById('excludeInput');
+    const addExcludeBtn = document.getElementById('addExcludeBtn');
+    const excludeTags = document.getElementById('excludeTags');
+    const caseSensitive = document.getElementById('caseSensitive');
+    const searchBtn = document.getElementById('searchBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const copyBtn = document.getElementById('copyBtn');
+    const previewSection = document.getElementById('previewSection');
+    const previewContent = document.getElementById('previewContent');
+    const matchCount = document.getElementById('matchCount');
+    const formatSection = document.getElementById('formatSection');
+    const extractDomains = document.getElementById('extractDomains');
+    const prefixInput = document.getElementById('prefixInput');
+    const suffixInput = document.getElementById('suffixInput');
+    const applyFormatBtn = document.getElementById('applyFormatBtn');
+    const resetFormatBtn = document.getElementById('resetFormatBtn');
+
+
+    // Add exclude term
+    function addExcludeTerm() {
+      const term = excludeInput.value.trim();
+      if (term && !excludeTerms.includes(term)) {
+        excludeTerms.push(term);
+        renderExcludeTags();
+        excludeInput.value = '';
+      }
+    }
+
+    // Render exclude tags
+    function renderExcludeTags() {
+      excludeTags.innerHTML = excludeTerms.map((term, index) => `
+        <span class="tag">
+          ${term}
+          <button class="tag-remove" onclick="removeExcludeTerm(${index})">×</button>
+        </span>
+      `).join('');
+    }
+
+    // Remove exclude term
+    window.removeExcludeTerm = function(index) {
+      excludeTerms.splice(index, 1);
+      renderExcludeTags();
+    };
+
+    // Add exclude button handler
+    addExcludeBtn.addEventListener('click', addExcludeTerm);
+
+    // Allow Enter key to add exclude term
+    excludeInput.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        addExcludeTerm();
+      }
+    });
+
+    // File upload handler
+    fileInput.addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (file) {
+        fileName = file.name;
+        const reader = new FileReader();
+        reader.onload = function(event) {
+          fileContent = event.target.result;
+          const lineCount = fileContent.split('\n').length;
+          fileInfo.textContent = `${fileName} (${lineCount} lines)`;
+          previewSection.classList.remove('show');
+          formatSection.classList.remove('show');
+          downloadBtn.disabled = true;
+          copyBtn.disabled = true;
+        };
+        reader.readAsText(file);
+      }
+    });
+
+    // Extract domain from URL or text
+    function extractDomain(text) {
+      try {
+        // Try to parse as URL first
+        const urlMatch = text.match(/https?:\/\/([^\/\s]+)/i);
+        if (urlMatch) {
+          return urlMatch[1];
+        }
+        
+        // Look for domain pattern (e.g., example.com, subdomain.example.com)
+        const domainMatch = text.match(/([a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,6})/i);
+        if (domainMatch) {
+          return domainMatch[1];
+        }
+        
+        return text; // Return original if no domain found
+      } catch (e) {
+        return text;
+      }
+    }
+
+    // Apply formatting to results
+    function applyFormatting() {
+      const shouldExtractDomains = extractDomains.checked;
+      const prefix = prefixInput.value;
+      const suffix = suffixInput.value;
+
+      matchedLines = originalMatchedLines.map(line => {
+        let text = line.text;
+        
+        // Extract domain if checkbox is checked
+        if (shouldExtractDomains) {
+          text = extractDomain(text);
+        }
+        
+        // Apply prefix and suffix
+        text = prefix + text + suffix;
+        
+        return { num: line.num, text: text };
+      });
+
+      updatePreview();
+    }
+
+    // Reset formatting
+    function resetFormatting() {
+      extractDomains.checked = false;
+      prefixInput.value = '';
+      suffixInput.value = '';
+      matchedLines = [...originalMatchedLines];
+      updatePreview();
+    }
+
+    // Update preview display
+    function updatePreview() {
+      previewContent.textContent = matchedLines.map(l => l.text).join('\n');
+      matchCount.textContent = `${matchedLines.length} matches`;
+    }
+
+    // Apply format button handler
+    applyFormatBtn.addEventListener('click', applyFormatting);
+
+    // Reset format button handler
+    resetFormatBtn.addEventListener('click', resetFormatting);
+
+    // Search button handler
+    searchBtn.addEventListener('click', function() {
+      if (!fileContent) {
+        alert('Upload a file first');
+        return;
+      }
+      if (!searchInput.value.trim()) {
+        alert('Enter a search word');
+        return;
+      }
+
+      const searchWord = searchInput.value.trim();
+      const isCaseSensitive = caseSensitive.checked;
+      const lines = fileContent.split('\n');
+      matchedLines = [];
+
+      lines.forEach((line, index) => {
+        const searchLine = isCaseSensitive ? line : line.toLowerCase();
+        const searchTerm = isCaseSensitive ? searchWord : searchWord.toLowerCase();
+        
+        // Check if line contains search term
+        if (searchLine.includes(searchTerm)) {
+          // Check if line contains any exclude terms
+          let shouldExclude = false;
+          for (const excludeWord of excludeTerms) {
+            const excludeTerm = isCaseSensitive ? excludeWord : excludeWord.toLowerCase();
+            if (searchLine.includes(excludeTerm)) {
+              shouldExclude = true;
+              break;
+            }
+          }
+          
+          if (!shouldExclude) {
+            matchedLines.push({
+              num: index + 1,
+              text: line
+            });
+          }
+        }
+      });
+
+      if (matchedLines.length === 0) {
+        previewContent.textContent = 'No matches found.';
+        downloadBtn.disabled = true;
+        copyBtn.disabled = true;
+        formatSection.classList.remove('show');
+      } else {
+        originalMatchedLines = [...matchedLines]; // Store original results
+        updatePreview();
+        downloadBtn.disabled = false;
+        copyBtn.disabled = false;
+        formatSection.classList.add('show');
+      }
+      previewSection.classList.add('show');
+    });
+
+    // Copy button handler
+    copyBtn.addEventListener('click', async function() {
+      if (matchedLines.length === 0) return;
+
+      const copyText = matchedLines.map(l => l.text).join('\n');
+      
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(copyText);
+          // Visual feedback
+          const originalText = copyBtn.innerHTML;
+          copyBtn.innerHTML = `
+            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            Copied!
+          `;
+          copyBtn.style.background = '#2d5016';
+          setTimeout(() => {
+            copyBtn.innerHTML = originalText;
+            copyBtn.style.background = '';
+          }, 2000);
+        } else {
+          // Fallback for older browsers
+          const textarea = document.createElement('textarea');
+          textarea.value = copyText;
+          textarea.style.position = 'fixed';
+          textarea.style.opacity = '0';
+          document.body.appendChild(textarea);
+          textarea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textarea);
+          alert('Results copied to clipboard!');
+        }
+      } catch (err) {
+        console.error('Copy failed:', err);
+        alert('Failed to copy. Please try manual selection.');
+      }
+    });
+
+    // Download button handler
+    downloadBtn.addEventListener('click', function() {
+      if (matchedLines.length === 0) return;
+
+      const downloadText = matchedLines.map(l => l.text).join('\n');
+      const downloadFileName = `${searchInput.value}_${fileName}`;
+
+      // Browser download
+      downloadBrowser(downloadFileName, downloadText);
+    });
+
+    // Browser download function
+    function downloadBrowser(fileName, data) {
+      const blob = new Blob([data], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+  </script>
+</body>
+</html>
