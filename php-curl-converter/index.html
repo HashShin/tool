@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PHP cURL Converter</title>
+    <link rel="stylesheet" href="../styles.css">
+</head>
+<body class="page-b">
+    <a href="../">Home</a>
+    <h1>PHP cURL Converter</h1>
+
+    <div class="textarea-wrapper">
+        <textarea id="httpRequestInput" placeholder="Paste your HTTP request here"></textarea>
+        <button class="paste-btn" id="pasteButton" title="Paste from clipboard">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                <path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1s-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm7 16H5V5h2v3h10V5h2v14z"/>
+            </svg>
+        </button>
+    </div>
+
+    <div class="controls">
+        <label><input type="checkbox" id="cookieCheckbox"> Cookie</label>
+        <label><input type="checkbox" id="refererCheckbox"> Referer</label>
+        <label><input type="checkbox" id="httpBuildQueryCheckbox"> http_build_query</label>
+    </div>
+
+    <h2>Converted PHP cURL</h2>
+    <pre id="curlOutput"></pre>
+    <button id="copyButton" class="hidden">Copy</button>
+
+    <script>
+        function processInputText(inputText) {
+          const regex = /name="([^"]+)"\s*\r?\n\r?\n([^-\r\n]+)/g;
+          const fields = {};
+          let match;
+
+          while ((match = regex.exec(inputText)) !== null) {
+            const name = match[1];
+            const value = match[2].trim();
+            fields[name] = value;
+          }
+
+          const params = new URLSearchParams(fields);
+          return params.toString();
+        }
+
+        function gStr(str, start, end = '') {
+          const startPos = str.indexOf(start);
+          if (startPos === -1) return '';
+
+          const afterStart = str.substring(startPos + start.length);
+
+          if (!end) return afterStart;
+
+          const endPos = afterStart.indexOf(end);
+          return endPos === -1 ? afterStart: afterStart.substring(0, endPos);
+        }
+
+        function convertHttpRequestToCurl(httpRequest, includeCookie, includeReferer, useHttpBuildQuery) {
+          if (httpRequest.includes("curl '")) {
+            const urlMatch = httpRequest.match(/curl '([^']+)'/);
+            if (!urlMatch) return '';
+
+            const url = urlMatch[1];
+            const headerMatches = httpRequest.match(/-H '([^']+)'/g) || [];
+            const headers = headerMatches.map(h => h.match(/-H '([^']+)'/)[1]);
+
+            const urlObj = new URL(url);
+            let path = urlObj.pathname;
+            if (urlObj.search) path += urlObj.search;
+
+            let request = `GET ${path} h2\n`;
+            request += `Host: ${urlObj.host}\n`;
+
+            headers.forEach(header => {
+              request += `${header}\n`;
+            });
+
+            if (httpRequest.includes('--data-raw')) {
+              let result = gStr(httpRequest, "--data-raw '", "'");
+
+              if (!result) {
+                const match = httpRequest.match(/--data-raw \\\$'(.*?)'/);
+                if (match) result = match[1];
+              }
+
+              if (!result) {
+                const matches = httpRequest.match(/--data-raw '(.*?)'/);
+                if (matches) result = matches[1];
+              }
+
+              if (result && result.includes('--WebKitFormBoundary')) {
+                result = result.replace(/\\r\\n/g, '\r\n');
+                result = processInputText(result);
+              }
+
+              if (result) {
+                request += `\n${result}`;
+              }
+            }
+
+            httpRequest = request;
+          }
+
+          const lines = httpRequest.split('\n');
+          const curlCode = [];
+
+          const pattern = /(POST|GET) (.+?) (HTTP|h2)/;
+          let path = '';
+
+          for (const line of lines) {
+            const match = line.match(pattern);
+            if (match) {
+              path = match[2];
+              break;
+            }
+          }
+
+          if (!path) return '';
+
+          let host = '';
+          for (const line of lines) {
+            const match = line.trim().match(/^Host: (.*)$/i);
+            if (match) {
+              host = match[1].trim();
+              break;
+            }
+          }
+
+          const pathParts = path.replace(/^\/|\/$/g, '').split('/');
+          let variableName = pathParts[pathParts.length - 1];
+
+          if (variableName.length > 20 || variableName.includes('.') || variableName.includes('-')) {
+            variableName = pathParts[0];
+            if (variableName.includes('.')) {
+              variableName = variableName.split('.')[0];
+            }
+            if (variableName.includes('-')) {
+              variableName = variableName.split('-')[0];
+            }
+            if (variableName.includes('?')) {
+              variableName = variableName.split('?')[0];
+            }
+          }
+          
+          // If variable name starts with a number, try the previous path part (left side)
+          let pathIndex = pathParts.length - 1;
+          while (/^\d/.test(variableName) && pathIndex > 0) {
+            pathIndex--;
+            variableName = pathParts[pathIndex];
+            if (variableName.includes('.')) {
+              variableName = variableName.split('.')[0];
+            }
+            if (variableName.includes('-')) {
+              variableName = variableName.split('-')[0];
+            }
+            if (variableName.includes('?')) {
+              variableName = variableName.split('?')[0];
+            }
+          }
+
+          curlCode.push(`$ch = curl_init("https://${host}${path}");`);
+          curlCode.push('curl_setopt($ch, CURLOPT_HEADER, 0);');
+          curlCode.push('curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);');
+          curlCode.push('curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);');
+          curlCode.push('curl_setopt($ch, CURLOPT_COOKIEFILE, $cookie);');
+          curlCode.push('curl_setopt($ch, CURLOPT_COOKIEJAR, $cookie);');
+
+          const postFields = [];
+          const headers = [];
+          const cookies = [];
+          const referers = [];
+          let isPostFieldSection = false;
+
+          const excludedHeaders = [
+            'host', 'content-length', 'x-requested-with', 'accept',
+            'sec-ch-ua-mobile', 'sec-ch-ua-platform', 'sec-ch-ua', 'sec-gpc',
+            'accept-language', 'origin', 'sec-fetch-site', 'sec-fetch-mode',
+            'sec-fetch-dest', 'accept-encoding', 'priority', 'cache-control',
+            'upgrade-insecure-requests', 'sec-fetch-user', 'connection', 'sec-fetch-storage-access'
+          ];
+
+          for (const line of lines) {
+            if (line.trim() === '') {
+              isPostFieldSection = true;
+              continue;
+            }
+
+            if (isPostFieldSection) {
+              postFields.push(line.trim());
+            } else {
+              const headerMatch = line.trim().match(/^([^:]+): (.*)$/i);
+
+              if (headerMatch) {
+                const headerName = headerMatch[1].trim().toLowerCase();
+                const headerValue = headerMatch[2].trim();
+
+                if (headerName === 'cookie') {
+                  if (includeCookie) {
+                    cookies.push(headerValue);
+                  }
+                } else if (headerName === 'referer') {
+                  if (includeReferer) {
+                    referers.push(headerValue);
+                  }
+                } else if (!excludedHeaders.includes(headerName)) {
+                  if (headerName === 'content-type' && httpRequest.includes('--WebKitFormBoundary')) {
+                    headers.push('content-type: application/x-www-form-urlencoded');
+                  } else {
+                    headers.push(`${headerName}: ${headerValue}`);
+                  }
+                }
+              }
+            }
+          }
+
+          let postfield = postFields.join('&');
+          if (postfield.includes('--WebKitFormBoundary')) {
+            postfield = processInputText(httpRequest);
+          }
+
+          if (cookies.length > 0) {
+            headers.push(`cookie: ${cookies.join('; ')}`);
+          }
+
+          if (referers.length > 0) {
+            headers.push(`referer: ${referers.join('; ')}`);
+          }
+
+          if (headers.length > 0) {
+            curlCode.push('curl_setopt($ch, CURLOPT_HTTPHEADER, [');
+            headers.forEach(header => {
+              curlCode.push(`    '${header}',`);
+            });
+            curlCode.push(']);');
+          }
+
+          if (postFields.length > 0) {
+            if (useHttpBuildQuery) {
+              // Parse the postfield into key-value pairs
+              const params = postfield.split('&').reduce((acc, pair) => {
+                const [key, value] = pair.split('=');
+                if (key) {
+                  acc.push(`    '${decodeURIComponent(key)}' => '${decodeURIComponent(value || '')}'`);
+                }
+                return acc;
+              }, []);
+              
+              curlCode.push('curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query([');
+              params.forEach((param, index) => {
+                curlCode.push(param + (index < params.length - 1 ? ',' : ''));
+              });
+              curlCode.push(']));');
+            } else {
+              if (postfield.includes('"') && postfield.includes("'")) {
+                postfield = postfield.replace(/'/g, "\\'");
+                curlCode.push(`curl_setopt($ch, CURLOPT_POSTFIELDS, '${postfield}');`);
+              } else if (postfield.includes('"')) {
+                curlCode.push(`curl_setopt($ch, CURLOPT_POSTFIELDS, '${postfield}');`);
+              } else if (postfield.includes("'")) {
+                curlCode.push(`curl_setopt($ch, CURLOPT_POSTFIELDS, "${postfield}");`);
+              } else {
+                curlCode.push(`curl_setopt($ch, CURLOPT_POSTFIELDS, "${postfield}");`);
+              }
+            }
+          }
+
+          if (!variableName) {
+            variableName = 'response';
+          }
+          
+          // Clean up variable name
+          variableName = variableName.replace(/\?/g, '').replace(/=/g, '');
+          
+          // If still starts with a number after all checks, prefix with underscore as last resort
+          if (/^\d/.test(variableName)) {
+            variableName = '_' + variableName;
+          }
+
+          curlCode.push(`$${variableName} = curl_exec($ch);`);
+          curlCode.push('curl_close($ch);');
+
+          return curlCode.join('\n');
+        }
+
+        function updateCurlCommand() {
+          const httpRequest = document.getElementById('httpRequestInput').value;
+          const includeCookie = document.getElementById('cookieCheckbox').checked;
+          const includeReferer = document.getElementById('refererCheckbox').checked;
+          const useHttpBuildQuery = document.getElementById('httpBuildQueryCheckbox').checked;
+
+          const result = convertHttpRequestToCurl(httpRequest, includeCookie, includeReferer, useHttpBuildQuery);
+
+          const curlOutput = document.getElementById('curlOutput');
+          curlOutput.textContent = result;
+
+          const copyButton = document.getElementById('copyButton');
+          if (result.trim() !== '') {
+            copyButton.classList.remove('hidden');
+          } else {
+            copyButton.classList.add('hidden');
+          }
+        }
+
+        // Clipboard functions using browser-native API
+        function copyToClipboard(text) {
+          return new Promise((resolve) => {
+            // Modern clipboard API
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              navigator.clipboard.writeText(text)
+                .then(() => resolve(true))
+                .catch(() => {
+                  // Fallback to execCommand if clipboard API fails
+                  const textArea = document.createElement('textarea');
+                  textArea.value = text;
+                  textArea.style.position = 'fixed';
+                  textArea.style.left = '-999999px';
+                  textArea.style.top = '-999999px';
+                  document.body.appendChild(textArea);
+                  textArea.focus();
+                  textArea.select();
+
+                  try {
+                    const successful = document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                    resolve(successful);
+                  } catch (err) {
+                    document.body.removeChild(textArea);
+                    resolve(false);
+                  }
+                });
+            }
+            // Last resort: execCommand
+            else {
+              const textArea = document.createElement('textarea');
+              textArea.value = text;
+              textArea.style.position = 'fixed';
+              textArea.style.left = '-999999px';
+              textArea.style.top = '-999999px';
+              document.body.appendChild(textArea);
+              textArea.focus();
+              textArea.select();
+
+              try {
+                const successful = document.execCommand('copy');
+                document.body.removeChild(textArea);
+                resolve(successful);
+              } catch (err) {
+                document.body.removeChild(textArea);
+                resolve(false);
+              }
+            }
+          });
+        }
+
+        // Paste function using browser-native API
+        function pasteFromClipboard() {
+          return new Promise((resolve) => {
+            // Modern clipboard API
+            if (navigator.clipboard && navigator.clipboard.readText) {
+              navigator.clipboard.readText()
+                .then(text => resolve(text))
+                .catch(() => {
+                  // Fallback: let user paste manually into the textarea
+                  resolve(null);
+                });
+            }
+            // No clipboard access available
+            else {
+              resolve(null);
+            }
+          });
+        }
+
+        // Initialize the application
+        function initializeApp() {
+          document.getElementById('pasteButton').addEventListener('click', function() {
+            pasteFromClipboard().then(text => {
+              if (text) {
+                document.getElementById('httpRequestInput').value = text;
+                updateCurlCommand();
+              } else {
+                // Fallback: let user paste manually into the textarea
+                const textarea = document.getElementById('httpRequestInput');
+                textarea.focus();
+                alert('Please paste your content into the text area');
+              }
+            }).catch(err => {
+              console.error('Failed to read clipboard contents: ', err);
+              const textarea = document.getElementById('httpRequestInput');
+              textarea.focus();
+            });
+          });
+
+          document.getElementById('copyButton').addEventListener('click', function() {
+            const curlOutput = document.getElementById('curlOutput');
+            const text = curlOutput.textContent.trim();
+            const button = document.getElementById('copyButton');
+
+            copyToClipboard(text).then(success => {
+              if (success) {
+                const originalText = button.textContent;
+                button.textContent = 'Copied!';
+                button.classList.add('success');
+
+                setTimeout(() => {
+                  button.textContent = originalText;
+                  button.classList.remove('success');
+                }, 2000);
+              } else {
+                alert('Failed to copy. Please select and copy manually.');
+              }
+            });
+          });
+
+          document.getElementById('httpRequestInput').addEventListener('input', updateCurlCommand);
+          document.getElementById('cookieCheckbox').addEventListener('change', updateCurlCommand);
+          document.getElementById('refererCheckbox').addEventListener('change', updateCurlCommand);
+          document.getElementById('httpBuildQueryCheckbox').addEventListener('change', updateCurlCommand);
+        }
+
+        // Wait for DOM to be loaded
+        document.addEventListener('DOMContentLoaded', initializeApp);
+    </script>
+</body>
+</html>
